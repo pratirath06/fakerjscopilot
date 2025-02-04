@@ -7,9 +7,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import streamlit as st
 from langchain_core.documents import Document
-from api import Groq_API, Gemini_API
-os.environ["GROQ_API_KEY"] = Groq_API
-os.environ["GOOGLE_API_KEY"]= Gemini_API
+os.environ["GROQ_API_KEY"] = st.secrets["Groq_API"]
+os.environ["GOOGLE_API_KEY"]= st.secrets["Gemini_API"]
 
 def load_faker_docs():
     docs = {
