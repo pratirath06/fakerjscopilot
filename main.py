@@ -41,39 +41,6 @@ Examples: {', '.join(details.get('examples', []))}
                             )
                             documents.append(doc)
     return documents
-'''def load_faker_docs():
-  docs = merge_faker_docs()
-
-  documents = []
-  for category, categories in docs.items():
-       for subcategory, functions in categories.items():
-           for func_name, details in functions.items():
-               content = f"""
-Category: {category}/{subcategory}
-Function: {func_name}
-Description: {details['description']}
-Examples: {', '.join(details['examples'])}"""
-
-               if 'patterns' in details:
-                   content += f"\nPatterns: {', '.join(details['patterns'])}"
-
-               if 'parameters' in details:
-                   content += f"\nParameters: {details['parameters']}"
-
-               if 'notes' in details:
-                   content += f"\nNotes: {', '.join(details['notes'])}"
-
-               documents.append(Document(
-                   page_content=content,
-                   metadata={
-                       "category": f"{category}/{subcategory}",
-                       "function": func_name,
-                       "parameters": details.get('parameters', {}),
-                       "description": details['description'],
-                       "examples": details['examples']
-                   }
-               ))
-  return documents'''
 all_docs = merge_faker_docs()
 def create_vector_store():
     docs = dict_to_documents(all_docs)
@@ -82,16 +49,13 @@ def create_vector_store():
         chunk_overlap=200
     )
     splits = text_splitter.split_documents(docs)
-
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-
     return FAISS.from_documents(splits, embeddings)
 
 def get_faker_function(user_input):
     vector_store = create_vector_store()
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     relevant_docs = retriever.invoke(user_input)
-
     prompt = ChatPromptTemplate.from_messages([
         ("system", """You are a Faker.js expert. Given the documentation context:
 
@@ -126,20 +90,12 @@ Think step by step about what the user is asking for, then construct the appropr
     )
     return chain.invoke({"relevant_docs": relevant_docs, "user_input": user_input})
 st.title("Faker.js Function Finder with RAG")
-user_input = st.text_input("Describe the data need:", "date of birth over 18")
+user_input = st.text_input("Describe the data need:")
 if user_input:
     with st.spinner("Searching Faker docs..."):
         try:
             result = get_faker_function(user_input)
             st.subheader("Recommended Function:")
             st.code(result, language="javascript")
-            '''st.divider()
-            st.caption("Top matching documentation:")
-            vector_store = create_vector_store()
-            retrieved_docs = vector_store.as_retriever().invoke(user_input)
-
-            for doc in retrieved_docs[:2]:
-                st.text(doc.page_content)
-                st.write("---")'''
         except Exception as e:
             st.error(f"Error: {str(e)}")
