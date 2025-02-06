@@ -41,22 +41,39 @@ Examples: {', '.join(details.get('examples', []))}
                             documents.append(doc)
     return documents
 all_docs = merge_faker_docs()
+class CustomGoogleGenerativeAIEmbeddings(GoogleGenerativeAIEmbeddings):
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        embeddings = []
+        batch_size = 100 
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            batch_embeddings = super().embed_documents(batch)
+            embeddings.extend(batch_embeddings)
+        return embeddings
+
+    def embed_query(self, text: str) -> List[float]:
+        """
+        For a single query, simply wrap it in a list and use embed_documents.
+        """
+        return self.embed_documents([text])[0]
 def create_vector_store():
     docs = dict_to_documents(all_docs)
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=200,
-        chunk_overlap=50
+        chunk_size=1000,
+        chunk_overlap=200
     )
     splits = text_splitter.split_documents(docs)
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = CustomGoogleGenerativeAIEmbeddings(model="models/embedding-001")
     return FAISS.from_documents(splits, embeddings)
-
 def get_faker_function(user_input):
     vector_store = create_vector_store()
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     relevant_docs = retriever.invoke(user_input)
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a Faker.js expert. Given the documentation context:
+        (
+            "system",
+            """You are a Faker.js expert. Given the documentation context:
 
 {docs}
 
@@ -73,7 +90,8 @@ For example, if someone asks for "generate a random adult's birthdate", you shou
 2. They want an adult (over 18)
 3. Therefore construct: faker.date.birthdate({{ mode: 'age', min: 18 }})
 
-Think step by step about what the user is asking for, then construct the appropriate function call and dont return function only, provide the parameters too. e.g. """),
+Think step by step about what the user is asking for, then construct the appropriate function call and don't return function only, provide the parameters too. e.g."""
+        ),
         ("user", "{input}")
     ])
     llm = ChatGroq(
@@ -81,15 +99,19 @@ Think step by step about what the user is asking for, then construct the appropr
         model_name="llama-3.3-70b-specdec",
     )
     chain = (
-        {"docs": lambda x: "\n\n".join([d.page_content for d in x["relevant_docs"]]),
-         "input": lambda x: x["user_input"]}
+        {
+            "docs": lambda x: "\n\n".join([d.page_content for d in x["relevant_docs"]]),
+            "input": lambda x: x["user_input"]
+        }
         | prompt
         | llm
         | StrOutputParser()
     )
+
     return chain.invoke({"relevant_docs": relevant_docs, "user_input": user_input})
 st.title("Faker.js Function Finder with RAG")
 user_input = st.text_input("Describe the data need:")
+
 if user_input:
     with st.spinner("Searching Faker docs..."):
         try:
