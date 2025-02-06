@@ -10,10 +10,8 @@ from langchain_core.documents import Document
 from merge import merge_faker_docs
 os.environ["GROQ_API_KEY"] = st.secrets["Groq_API"]
 os.environ["GOOGLE_API_KEY"]= st.secrets["Gemini_API"]
-
 from langchain_core.documents import Document
 from typing import List
-
 def dict_to_documents(docs_dict: dict) -> List[Document]:
     documents = []
 
@@ -23,7 +21,6 @@ def dict_to_documents(docs_dict: dict) -> List[Document]:
                 if isinstance(functions, dict):
                     for func_name, details in functions.items():
                         if isinstance(details, dict):
-                            # Create content string from details
                             content = f"""
 Category: {category}/{subcategory}
 Function: {func_name}
@@ -34,8 +31,6 @@ Examples: {', '.join(details.get('examples', []))}
                                 content += f"Patterns: {', '.join(details['patterns'])}\n"
                             if 'parameters' in details:
                                 content += f"Parameters: {str(details['parameters'])}\n"
-
-                            # Create Document object
                             doc = Document(
                                 page_content=content,
                                 metadata={
@@ -45,9 +40,7 @@ Examples: {', '.join(details.get('examples', []))}
                                 }
                             )
                             documents.append(doc)
-
     return documents
-
 '''def load_faker_docs():
   docs = merge_faker_docs()
 
@@ -81,11 +74,8 @@ Examples: {', '.join(details['examples'])}"""
                    }
                ))
   return documents'''
-all_docs = merge_faker_docs()  # Your existing merged dictionary
-
-
+all_docs = merge_faker_docs()
 def create_vector_store():
-    #docs = load_faker_docs()
     docs = dict_to_documents(all_docs)
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=2000,
@@ -123,12 +113,10 @@ For example, if someone asks for "generate a random adult's birthdate", you shou
 Think step by step about what the user is asking for, then construct the appropriate function call and dont return function only, provide the parameters too. e.g. """),
         ("user", "{input}")
     ])
-
     llm = ChatGroq(
         temperature=0.1,
         model_name="llama-3.3-70b-specdec",
     )
-
     chain = (
         {"docs": lambda x: "\n\n".join([d.page_content for d in x["relevant_docs"]]),
          "input": lambda x: x["user_input"]}
@@ -136,20 +124,15 @@ Think step by step about what the user is asking for, then construct the appropr
         | llm
         | StrOutputParser()
     )
-
     return chain.invoke({"relevant_docs": relevant_docs, "user_input": user_input})
-
-# Streamlit UI
 st.title("Faker.js Function Finder with RAG")
 user_input = st.text_input("Describe the data need:", "date of birth over 18")
-
 if user_input:
     with st.spinner("Searching Faker docs..."):
         try:
             result = get_faker_function(user_input)
             st.subheader("Recommended Function:")
             st.code(result, language="javascript")
-
             '''st.divider()
             st.caption("Top matching documentation:")
             vector_store = create_vector_store()
@@ -158,6 +141,5 @@ if user_input:
             for doc in retrieved_docs[:2]:
                 st.text(doc.page_content)
                 st.write("---")'''
-
         except Exception as e:
             st.error(f"Error: {str(e)}")
