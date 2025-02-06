@@ -45,7 +45,7 @@ def create_vector_store():
     docs = dict_to_documents(all_docs)
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=200,
-        chunk_overlap=500
+        chunk_overlap=50
     )
     splits = text_splitter.split_documents(docs)
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
