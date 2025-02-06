@@ -14,7 +14,6 @@ from langchain_core.documents import Document
 from typing import List
 def dict_to_documents(docs_dict: dict) -> List[Document]:
     documents = []
-
     for category, categories in docs_dict.items():
         if isinstance(categories, dict):
             for subcategory, functions in categories.items():
@@ -45,8 +44,8 @@ all_docs = merge_faker_docs()
 def create_vector_store():
     docs = dict_to_documents(all_docs)
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=100000,
-        chunk_overlap=200
+        chunk_size=1000,
+        chunk_overlap=100
     )
     splits = text_splitter.split_documents(docs)
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
