@@ -78,7 +78,7 @@ Think step by step about what the user is asking for, then construct the appropr
     ])
     llm = ChatGroq(
         temperature=0.1,
-        model_name="llama-3.3-70b-specdec",
+        model_name="llama3-8b-8192",
     )
     chain = (
         {"docs": lambda x: "\n\n".join([d.page_content for d in x["relevant_docs"]]),
